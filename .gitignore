@@ -1,0 +1,9 @@
+# Python virtual environments
+API_1/venv/
+API_2/venv/
+API_3/venv/
+
+# Build folders
+API_1/build/
+API_2/build/
+API_3/build/
