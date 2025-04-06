@@ -53,7 +53,6 @@ make -j$(nproc)
 export PYTHONPATH=$(pwd):$PYTHONPATH
 cd ..
 python3 test_script.py
-python3 benchmark_2.py
 ```
 
 ## API_3: HPX Parallel Sort

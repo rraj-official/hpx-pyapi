@@ -1,9 +1,9 @@
 #include <pybind11/pybind11.h>
-#include <pybind11/stl.h>          // for automatic conversion between STL and Python types
+#include <pybind11/stl.h>          // Enables automatic conversion between STL and Python types
 #include <hpx/hpx_init.hpp>
 #include <hpx/include/async.hpp>
 #include <hpx/include/runtime.hpp>
-#include <hpx/include/lcos.hpp>      // for hpx::wait_all
+#include <hpx/include/lcos.hpp>    // Provides hpx::wait_all for synchronization
 #include <hpx/execution.hpp>
 
 #include <mutex>
@@ -15,12 +15,12 @@
 #include <iostream>
 #include <atomic>
 
-// Global state
+// Global state to track HPX runtime status
 static std::atomic<bool> hpx_running{false};
 static std::mutex hpx_mutex;
 static std::condition_variable hpx_cv;
 
-// Simple HPX main function that will run when HPX starts
+// HPX main function that runs when HPX starts and signals completion
 int hpx_main(int argc, char* argv[])
 {
     {
@@ -31,7 +31,7 @@ int hpx_main(int argc, char* argv[])
     return 0;
 }
 
-// Initialize HPX
+// Initializes the HPX runtime in a separate thread
 void init_hpx(int threads)
 {
     if (hpx_running)
@@ -44,7 +44,7 @@ void init_hpx(int threads)
             "hpx.commandline.allow_unknown=1"
         };
         
-        // Create dummy args for hpx::init
+        // Create arguments for hpx::init
         int argc = 1;
         char prog_name[] = "hpx_binding";
         char* argv[] = {prog_name, nullptr};
@@ -56,7 +56,7 @@ void init_hpx(int threads)
     });
     t.detach();
     
-    // Wait for HPX to start
+    // Wait for HPX to start, with timeout
     {
         std::unique_lock<std::mutex> lk(hpx_mutex);
         if (!hpx_running) {
@@ -68,12 +68,11 @@ void init_hpx(int threads)
     }
 }
 
-// Helper function to compute product of numbers in the range [start, end].
-// For small ranges (size <= threshold), the product is computed sequentially.
-// Otherwise, the range is split into two halves, each computed asynchronously.
+// Recursively computes factorial of a range using HPX async tasks
+// Small ranges computed sequentially, larger ranges split into parallel tasks
 std::uint64_t parallel_factorial_range(std::uint64_t start, std::uint64_t end)
 {
-    constexpr std::uint64_t threshold = 10; // adjust as needed
+    constexpr std::uint64_t threshold = 10;
     if (end - start + 1 <= threshold)
     {
          std::uint64_t result = 1;
@@ -94,7 +93,7 @@ std::uint64_t parallel_factorial_range(std::uint64_t start, std::uint64_t end)
     }
 }
 
-// Factorial implementation using parallel asynchronous tasks.
+// Factorial implementation using parallel asynchronous tasks
 std::uint64_t factorial(std::uint64_t n)
 {
     if(n == 0)
@@ -102,7 +101,8 @@ std::uint64_t factorial(std::uint64_t n)
     return parallel_factorial_range(1, n);
 }
 
-// Matrix multiplication using HPX asynchronous tasks with a threshold for small workloads.
+// Matrix multiplication using HPX asynchronous tasks
+// Uses adaptive approach - sequential for small matrices, parallel for larger ones
 std::vector<std::vector<int>> matrix_multiply(
     const std::vector<std::vector<int>>& A,
     const std::vector<std::vector<int>>& B)
@@ -118,11 +118,11 @@ std::vector<std::vector<int>> matrix_multiply(
     if (colsA != rowsB)
         throw std::runtime_error("Matrix dimension mismatch");
     
-    // Initialize result matrix.
+    // Initialize result matrix
     std::vector<std::vector<int>> R(rowsA, std::vector<int>(colsB, 0));
 
-    // If the workload is small, perform sequential multiplication.
-    constexpr size_t async_threshold = 1000; // threshold for total cells in R
+    // Use sequential multiplication for small matrices
+    constexpr size_t async_threshold = 1000;
     if (rowsA * colsB < async_threshold)
     {
         for (size_t i = 0; i < rowsA; i++) {
@@ -137,7 +137,7 @@ std::vector<std::vector<int>> matrix_multiply(
         return R;
     }
     
-    // For larger matrices, use asynchronous tasks to compute each row.
+    // For larger matrices, use asynchronous tasks per row
     std::vector<hpx::future<void>> futures;
     futures.reserve(rowsA);
     
@@ -172,11 +172,12 @@ std::vector<std::vector<int>> py_matrix_multiply(
 
 namespace py = pybind11;
 
+// Module definition for exposing C++ functions to Python
 PYBIND11_MODULE(hpx_bindings, m)
 {
     m.doc() = "Minimal HPX python bindings for factorial and matrix multiplication";
     
-    // Set up number of threads
+    // Set up number of threads based on hardware or environment variable
     int threads = std::thread::hardware_concurrency();
     if (const char* env_p = std::getenv("HPX_NUM_THREADS")) {
         int t = std::atoi(env_p);
