@@ -4,12 +4,12 @@ import time
 import random
 
 # Initialize HPX runtime with 8 threads and register cleanup function
-hpx.start_hpx(8)
+hpx.start_hpx(4)
 atexit.register(hpx.stop_hpx)
 
 # Generate a large dataset of random integers for sorting benchmark
 N = 10**7  # 10 million numbers
-numbers = [random.randint(0, 10**7) for _ in range(N)]
+numbers = [random.randint(0, 10**8) for _ in range(N)]
 
 # Benchmark Python's built-in sort function
 numbers_python = numbers.copy()
