@@ -1,0 +1,29 @@
+#pragma once
+#include <cassert>
+#include <vector>
+#include <hpx/parallel/algorithms/for_loop.hpp>
+#include <hpx/execution.hpp>
+
+inline void {{ func_name }}(
+    std::vector<double>& {{ arrays[0].name }},
+{% for a in arrays[1:] -%}
+    const std::vector<double>& {{ a.name }},
+{% endfor -%}
+{% for s in scalars -%}
+    const double& {{ s.name }}{% if not loop.last %}, {% endif %}
+{% endfor -%}
+)
+{
+    const int n = {{ arrays[1].name }}.size();
+    assert(n == {{ arrays[0].name }}.size());
+
+    /* HPX ≥ 1.8: use experimental::for_loop */
+    hpx::experimental::for_loop(
+        hpx::execution::par, 0, n,
+        [&](int {{ idx.name }}) {
+{% for eq in equations -%}
+            {{ eq.lhs }} = {{ eq.rhs }};
+{% endfor -%}
+        }
+    );
+}
